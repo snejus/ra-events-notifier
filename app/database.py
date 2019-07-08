@@ -24,6 +24,7 @@ class Database:
         engine = create_engine(database_url, echo=False)
         Session = sessionmaker(bind=engine)
         session = Session()
+
         return cls(session)
 
     @classmethod
@@ -34,6 +35,7 @@ class Database:
 
     def update_user(self, user):
         db_user = self.session.query(DBUser).filter_by(nickname=user.nickname).first()
+
         if db_user is None:
             self.logger.info(f"Adding new user {user.nickname} to the database")
             db_user = DBUser(name=user.name, nickname=user.nickname, email=user.email)
@@ -52,6 +54,7 @@ class Database:
             ):
                 db_location = DBLocation(name=location, user_id=db_user.id)
                 self.session.add(db_location)
+
         for artist in user.artists:
             if (
                 self.session.query(DBArtist)
@@ -63,6 +66,7 @@ class Database:
                     name=artist["name"], tag=artist["tag"], user_id=db_user.id
                 )
                 self.session.add(db_artist)
+
         for venue in user.venues:
             if (
                 self.session.query(DBVenue)
@@ -74,6 +78,7 @@ class Database:
                     name=venue["name"], tag=venue["tag"], user_id=db_user.id
                 )
                 self.session.add(db_venue)
+
         for promoter in user.promoters:
             if (
                 self.session.query(DBPromoter)
@@ -89,16 +94,19 @@ class Database:
 
     def get_distinctive_items(self, item_name):
         self.logger.info(f"Getting {item_name} items from the database")
-        if item_name is "artist":
+
+        if item_name == "artist":
             item_object = DBArtist
-        elif item_name is "venue":
+        elif item_name == "venue":
             item_object = DBVenue
-        elif item_name is "promoter":
+        elif item_name == "promoter":
             item_object = DBPromoter
 
         items = []
+
         for item in self.session.query(item_object.name, item_object.tag).distinct():
             items.append({"name": item[0], "tag": item[1]})
+
         return items
 
     def fetch_from_database(self, event_id, event_type):
