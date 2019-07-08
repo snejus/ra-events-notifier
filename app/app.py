@@ -25,7 +25,7 @@ from app.user import User
 
 
 class App:
-    DEBUG = False
+    DEBUG = True
 
     if DEBUG:
         CONFIG_PATH = "config_testing.json"
@@ -118,12 +118,19 @@ class App:
 
     def download_users_interests(self, users):
         with requests.Session() as s:
-            s.post(self.CONFIG["login_url"], data=self.CONFIG["payload"])
+            login_response = s.post(
+                self.CONFIG["login_url"],
+                data=self.CONFIG["payload"],
+                headers=self.CONFIG["headers"],
+            )
+
+            if not self.logged_in(login_response):
+                raise Exception("Could not login to Resident Advisor")
 
             for user in users:
                 self.logger.info(f"Fetching user {user.nickname} preferences")
                 url = self.CONFIG["profile_url_prefix"] + user.nickname + "/favourites"
-                html = s.get(url)
+                html = s.get(url, headers=self.CONFIG["headers"])
                 html.encoding = "utf-8"
                 soup = BeautifulSoup(html.text, "html.parser")
 
@@ -178,6 +185,18 @@ class App:
                     )
 
         return users
+
+    def logged_in(self, login_response):
+        login_response.encoding = "utf-8"
+        soup = BeautifulSoup(login_response.text, "html.parser")
+
+        spans = soup.find_all("span")
+
+        for span in spans:
+            if span.get_text() == "Welcome":
+                return True
+
+        return False
 
     def update_database(self, users, db):
         for user in users:
